@@ -146,20 +146,16 @@ sub generate_html {
     }
 
     print $fh <<'HTML';
-<!DOCTYPE html><html><head><style>
-table{border-collapse:collapse}td{width:18px;height:18px;text-align:center;font-family:monospace;padding:0;margin:0}
-.w{background:#000;color:#000}.g{background:#ffc}.b{background:orange}
-.p{background:#acf}.s{background:#cfc}
-</style></head><body>
+<!DOCTYPE html><html><head><style>table{border-collapse:collapse}td{width:28px;height:28px;text-align:center;font-family:monospace;padding:0;margin:0;cursor:default}table a{text-decoration:none;display:flex;justify-content:center;align-items:center;height:100%;}table a:visited,table a:active,table a:link{color:black}.w{background:#000;color:#000}.g{background:#ffc}.b{background:orange}.p{background:#acf}.s{background:#cfc}</style></head><body>
 HTML
 
-    print $fh "<table>\n";
-    for my $y (0..$#map) {
+    print $fh "<table>";
+    for my $y (0 .. $#map) {
         print $fh "<tr>";
-        for my $x (0..$#{$map[$y]}) {
+        for my $x (0 .. $#{$map[$y]}) {
             my $pos = "$x,$y";
             my ($class, $char) = ("", " ");
-
+    
             if ($map[$y][$x] eq '#') {
                 ($class, $char) = ("w", "#");
             } elsif ($px == $x && $py == $y) {
@@ -171,15 +167,41 @@ HTML
             } elsif ($goal{$pos}) {
                 ($class, $char) = ("g", '.');
             }
-
+    
             my $td = "<td";
             $td .= qq{ class="$class"} if $class;
-            $td .= ">$char</td>";
+            $td .= ">";
+    
+            # Determine direction if adjacent
+            my $dx = $x - $px;
+            my $dy = $y - $py;
+            my $dir;
+            $dir = 'd' if $dx == 1 && $dy == 0;
+            $dir = 'a' if $dx == -1 && $dy == 0;
+            $dir = 's' if $dx == 0 && $dy == 1;
+            $dir = 'w' if $dx == 0 && $dy == -1;
+    
+            my $inner = $char;
+    
+            if ($dir) {
+                my $next = try_move($state, $dir);
+                if ($next) {
+                    my $next_key = encode_state($next->{player}, $next->{boxes});
+                    my $target_id = $state_ids{$next_key};
+                    if (defined $target_id) {
+                        my $href = sprintf("state_%05d.html", $target_id);
+                        $inner = qq{<a href="$href">$inner</a>};
+                    }
+                }
+            }
+    
+            $td .= "$inner</td>";
             print $fh $td;
         }
-        print $fh "</tr>\n";
+        print $fh "</tr>";
     }
-    print $fh "</table>\n";
+
+    print $fh "</table>";
 
     # Movement links
     print $fh "<div>";
@@ -195,12 +217,12 @@ HTML
         printf $fh qq{<a href="state_%05d.html" accesskey="%s">%s</a> },
             $target_id, $dir, uc($dir);
     }
-    print $fh "</div>\n";
+    print $fh "</div>";
 
     # Final solved message
-    print $fh qq{<div><small>Puzzle Solved!</small></div>\n} if $solved;
+    print $fh qq{<div><small>Puzzle Solved!</small></div>} if $solved;
 
-    print $fh "</body></html>\n";
+    print $fh "</body></html>";
     close $fh;
 }
 
